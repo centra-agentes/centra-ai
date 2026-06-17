@@ -16,6 +16,7 @@ import { VigilanceModule } from './modules/vigilance/vigilance.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ApiKeyGuard } from './modules/auth/guards/api-key.guard';
 import { AgentModule } from './modules/agent/agent.module';
+import { LicenseModule } from './modules/license/license.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AgentModule } from './modules/agent/agent.module';
     // ─── Servir el dashboard (public/) en la raíz ─────────────────────────
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
+      renderPath: '*path',
       exclude: ['/api/(.*)'],
       serveStaticOptions: {
         index: 'index.html',
@@ -68,6 +70,7 @@ import { AgentModule } from './modules/agent/agent.module';
     PublicacionesModule,
     VigilanceModule,
     AgentModule,
+    LicenseModule,
   ],
   controllers: [HealthController],
   providers: [

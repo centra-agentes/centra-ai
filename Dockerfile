@@ -18,8 +18,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-# Copiar build
+# Copiar build y assets estáticos
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
 
 # Usuario no-root para seguridad
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
