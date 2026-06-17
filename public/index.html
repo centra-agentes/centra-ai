@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CentraVigía</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary:       #18181B;
+      --primary-dark:  #09090B;
+      --primary-light: #F4F4F5;
+      --surface:       #F9FAFB;
+      --border:        #E4E4E7;
+      --border-light:  #F4F4F5;
+      --text:          #18181B;
+      --text-2:        #52525B;
+      --text-3:        #A1A1AA;
+      --orange:        #F97316;
+      --orange-bg:     #FFF7ED;
+      --green:         #16A34A;
+      --green-bg:      #F0FDF4;
+      --amber:         #D97706;
+      --amber-bg:      #FFFBEB;
+      --red:           #DC2626;
+      --red-bg:        #FEF2F2;
+      --blue:          #2563EB;
+      --blue-bg:       #EFF6FF;
+      --radius:        10px;
+      --radius-lg:     14px;
+      --shadow:        0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md:     0 4px 12px rgba(0,0,0,.08);
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--surface); color: var(--text); font-size: 14px; line-height: 1.5; }
+    [x-cloak] { display: none !important; }
+
+    /* ── Layout ────────────────────────────────────── */
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+    .header { background: var(--primary); color: #fff; height: 56px; display: flex; align-items: center; padding: 0 24px; gap: 16px; flex-shrink: 0; position: sticky; top: 0; z-index: 100; }
+    .header-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+    .header-logo svg { width: 18px; height: 18px; opacity: .9; }
+    .header-instance { font-size: 12px; color: rgba(255,255,255,.45); margin-left: 4px; }
+    .header-spacer { flex: 1; }
+    .header-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,.6); }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
+    .dot.err { background: #f87171; }
+    .btn-ghost { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.75); padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background .15s; }
+    .btn-ghost:hover { background: rgba(255,255,255,.14); }
+
+    .tabs { background: #fff; border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 2px; }
+    .tab { padding: 12px 16px; font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s; white-space: nowrap; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+    .tab-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; min-width: 16px; height: 16px; padding: 0 4px; margin-left: 5px; }
+
+    .main { flex: 1; padding: 24px; max-width: 900px; margin: 0 auto; width: 100%; }
+
+    /* ── Login ─────────────────────────────────────── */
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--surface); }
+    .login-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px; width: 100%; max-width: 400px; box-shadow: var(--shadow-md); }
+    .login-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; margin-bottom: 8px; }
+    .login-logo svg { width: 22px; height: 22px; color: var(--primary); }
+    .login-sub { font-size: 13px; color: var(--text-2); margin-bottom: 28px; }
+    .field { margin-bottom: 16px; }
+    .label { display: block; font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+    .input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; background: #fff; color: var(--text); outline: none; transition: border-color .15s, box-shadow .15s; font-family: inherit; }
+    .input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(24,24,27,.08); }
+    .input.mono { font-family: 'SF Mono', 'Fira Code', monospace; letter-spacing: .02em; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: background .15s, opacity .15s; font-family: inherit; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-secondary { background: var(--primary-light); color: var(--text); }
+    .btn-secondary:hover { background: #e4e4e7; }
+    .btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid #fecaca; }
+    .btn-danger:hover { background: #fee2e2; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-full { width: 100%; }
+    .error-msg { display: flex; align-items: center; gap: 8px; background: var(--red-bg); color: var(--red); border: 1px solid #fecaca; border-radius: var(--radius); padding: 10px 12px; font-size: 12px; margin-top: 12px; }
+
+    /* ── Cards & sections ──────────────────────────── */
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .card-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .card-body { padding: 20px; }
+    .section-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; letter-spacing: -.02em; }
+    .section-sub { font-size: 13px; color: var(--text-2); margin-bottom: 20px; }
+
+    /* ── Table ─────────────────────────────────────── */
+    .table { width: 100%; border-collapse: collapse; }
+    .table th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); font-size: 13px; vertical-align: middle; }
+    .table tr:last-child td { border-bottom: none; }
+    .table tr:hover td { background: #fafafa; }
+
+    /* ── Badges ────────────────────────────────────── */
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .badge-green  { background: var(--green-bg);  color: var(--green);  }
+    .badge-red    { background: var(--red-bg);    color: var(--red);    }
+    .badge-amber  { background: var(--amber-bg);  color: var(--amber);  }
+    .badge-blue   { background: var(--blue-bg);   color: var(--blue);   }
+    .badge-gray   { background: var(--primary-light); color: var(--text-2); }
+    .badge-orange { background: var(--orange-bg); color: var(--orange); }
+
+    /* ── Alert item ────────────────────────────────── */
+    .alert-item { padding: 14px 20px; border-bottom: 1px solid var(--border-light); display: flex; gap: 14px; align-items: flex-start; transition: background .1s; }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-item:hover { background: #fafafa; }
+    .alert-item.unread { background: #fefce8; }
+    .alert-item.unread:hover { background: #fef9c3; }
+    .alert-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); margin-top: 5px; flex-shrink: 0; }
+    .alert-dot.read { background: var(--border); }
+    .alert-content { flex: 1; min-width: 0; }
+    .alert-rad { font-size: 11px; font-family: 'SF Mono', monospace; color: var(--text-3); margin-bottom: 2px; }
+    .alert-act { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alert-time { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .alert-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+
+    /* ── Análisis IA ───────────────────────────────── */
+    .analysis-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-top: 16px; }
+    .analysis-header { padding: 14px 20px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; }
+    .analysis-body { padding: 20px; }
+    .analysis-section { margin-bottom: 16px; }
+    .analysis-section:last-child { margin-bottom: 0; }
+    .analysis-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .analysis-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+    .accion-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: var(--radius); margin-bottom: 6px; border: 1px solid var(--border-light); }
+    .accion-item:last-child { margin-bottom: 0; }
+
+    /* ── Empty state ───────────────────────────────── */
+    .empty { padding: 48px 20px; text-align: center; color: var(--text-3); }
+    .empty svg { width: 36px; height: 36px; margin: 0 auto 12px; opacity: .3; }
+    .empty p { font-size: 13px; }
+
+    /* ── Inline form ───────────────────────────────── */
+    .inline-form { background: var(--surface); border-top: 1px solid var(--border-light); padding: 16px 20px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .inline-form .field { margin-bottom: 0; flex: 1; min-width: 160px; }
+
+    /* ── Process detail ────────────────────────────── */
+    .process-meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .meta-item { background: var(--surface); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 10px 14px; }
+    .meta-label { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+    .meta-value { font-size: 13px; font-weight: 500; color: var(--text); }
+
+    /* ── Toast ─────────────────────────────────────── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--primary); color: #fff; padding: 12px 18px; border-radius: var(--radius-lg); font-size: 13px; font-weight: 500; box-shadow: var(--shadow-md); z-index: 9999; max-width: 320px; }
+    .toast.success { background: var(--green); }
+    .toast.error { background: var(--red); }
+
+    /* ── Utils ─────────────────────────────────────── */
+    .flex { display: flex; } .items-center { align-items: center; } .justify-between { justify-content: space-between; }
+    .gap-2 { gap: 8px; } .gap-3 { gap: 12px; } .mt-4 { margin-top: 16px; } .mb-3 { margin-bottom: 12px; }
+    .text-mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+    .spin.dark { border-color: rgba(24,24,27,.15); border-top-color: var(--primary); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body x-data="app()" x-init="init()" x-cloak>
+
+  <!-- ══════════════════════════════════════════════════════ LOGIN ══ -->
+  <div x-show="!authenticated" class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        </svg>
+        CentraVigía
+      </div>
+      <p class="login-sub">Ingresa tu API key para acceder al dashboard</p>
+
+      <div class="field">
+        <label class="label">API Key</label>
+        <input
+          type="password"
+          class="input mono"
+          placeholder="cv_..."
+          x-model="loginKey"
+          @keydown.enter="login()"
+          autocomplete="off"
+        />
+      </div>
+
+      <button class="btn btn-primary btn-full" @click="login()" :disabled="authLoading">
+        <span x-show="authLoading" class="spin"></span>
+        <span x-text="authLoading ? 'Verificando...' : 'Conectar'"></span>
+      </button>
+
+      <div x-show="authError" class="error-msg">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <span x-text="authError"></span>
+      </div>
+
+      <p style="font-size:11px;color:var(--text-3);margin-top:20px;text-align:center;">
+        La API key se guarda localmente en tu navegador
+      </p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ DASHBOARD ══ -->
+  <div x-show="authenticated" class="app">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        </svg>
+        CentraVigía
+        <span class="header-instance" x-text="health?.instance ?? ''"></span>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-status">
+        <span class="dot" :class="{ err: !health?.db }"></span>
+        <span x-text="health?.db ? 'Conectado' : 'Sin BD'"></span>
+      </div>
+      <button class="btn-ghost" @click="logout()">Salir</button>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab" :class="{ active: tab === 'radicados' }" @click="tab = 'radicados'; loadWatches()">
+        Radicados
+        <span x-show="watches.length" class="tab-badge" x-text="watches.length" style="background:var(--primary-light);color:var(--text-2);"></span>
+      </button>
+      <button class="tab" :class="{ active: tab === 'alertas' }" @click="tab = 'alertas'; loadAlerts()">
+        Alertas
+        <span x-show="unreadCount > 0" class="tab-badge" x-text="unreadCount"></span>
+      </button>
+      <button class="tab" :class="{ active: tab === 'consultar' }" @click="tab = 'consultar'">Consultar</button>
+      <button class="tab" :class="{ active: tab === 'ajustes' }" @click="tab = 'ajustes'">Ajustes</button>
+    </nav>
+
+    <!-- Content -->
+    <main class="main">
+
+      <!-- ══════════════════════════ RADICADOS ══ -->
+      <div x-show="tab === 'radicados'">
+        <p class="section-title">Radicados en vigilancia</p>
+        <p class="section-sub">El agente verifica actuaciones nuevas cada 15 minutos.</p>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" x-text="`${watches.length} radicado${watches.length !== 1 ? 's' : ''}`"></span>
+            <button class="btn btn-primary btn-sm" @click="showAddForm = !showAddForm">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Agregar
+            </button>
+          </div>
+
+          <!-- Spinner -->
+          <div x-show="watchesLoading" style="padding:32px;text-align:center;">
+            <span class="spin dark"></span>
+          </div>
+
+          <!-- Empty -->
+          <div x-show="!watchesLoading && !watches.length" class="empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            <p>No hay radicados en vigilancia</p>
+            <p style="margin-top:4px;">Agrega el primero con el botón de arriba</p>
+          </div>
+
+          <!-- Table -->
+          <div x-show="!watchesLoading && watches.length">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Radicado / Etiqueta</th>
+                  <th>Estado</th>
+                  <th>Última verificación</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="w in watches" :key="w.id">
+                  <tr>
+                    <td>
+                      <div class="text-mono truncate" style="max-width:220px" x-text="w.numeroRadicado"></div>
+                      <div x-show="w.label" style="font-size:11px;color:var(--text-3);margin-top:2px;" x-text="w.label"></div>
+                    </td>
+                    <td>
+                      <span class="badge" :class="w.isActive ? 'badge-green' : 'badge-gray'">
+                        <span class="dot" :class="{ err: !w.isActive }" style="width:5px;height:5px;margin-right:2px;"></span>
+                        <span x-text="w.isActive ? 'Activo' : 'Inactivo'"></span>
+                      </span>
+                      <span x-show="w.consecutiveFailures > 0" class="badge badge-amber" style="margin-left:4px;">
+                        <span x-text="`${w.consecutiveFailures} fallo${w.consecutiveFailures !== 1 ? 's' : ''}`"></span>
+                      </span>
+                    </td>
+                    <td style="color:var(--text-2);" x-text="w.lastCheckedAt ? timeAgo(w.lastCheckedAt) : 'Sin verificar'"></td>
+                    <td>
+                      <div class="flex gap-2">
+                        <button
+                          class="btn btn-secondary btn-sm"
+                          @click="checkWatch(w)"
+                          :disabled="w._checking"
+                          title="Verificar ahora"
+                        >
+                          <span x-show="w._checking" class="spin dark" style="width:10px;height:10px;"></span>
+                          <svg x-show="!w._checking" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        </button>
+                        <button
+                          class="btn btn-secondary btn-sm"
+                          @click="toggleWatch(w)"
+                          :title="w.isActive ? 'Desactivar' : 'Activar'"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle :cx="w.isActive ? 17 : 7" cy="12" r="3" fill="currentColor"/></svg>
+                        </button>
+                        <button
+                          class="btn btn-danger btn-sm"
+                          @click="deleteWatch(w)"
+                          title="Eliminar"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Add form -->
+          <div x-show="showAddForm" class="inline-form">
+            <div class="field">
+              <label class="label">Número de radicado (23 dígitos)</label>
+              <input type="text" class="input mono" placeholder="05001418900720240095600" maxlength="23" x-model="newWatch.numeroRadicado" @keydown.enter="addWatch()" />
+            </div>
+            <div class="field">
+              <label class="label">Etiqueta (opcional)</label>
+              <input type="text" class="input" placeholder="Ej: Caso García" x-model="newWatch.label" @keydown.enter="addWatch()" />
+            </div>
+            <button class="btn btn-primary" @click="addWatch()" :disabled="addingWatch" style="flex-shrink:0;margin-bottom:0;">
+              <span x-show="addingWatch" class="spin"></span>
+              <span x-text="addingWatch ? 'Agregando...' : 'Agregar'"></span>
+            </button>
+            <button class="btn btn-secondary" @click="showAddForm = false" style="flex-shrink:0;margin-bottom:0;">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════ ALERTAS ══ -->
+      <div x-show="tab === 'alertas'">
+        <p class="section-title">Alertas de actuaciones</p>
+        <p class="section-sub">Nuevas actuaciones detectadas por el agente en tus radicados.</p>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="flex items-center gap-2">
+              <span class="card-title">
+                <span x-text="alertFilter === 'unread' ? `${unreadCount} sin leer` : `${alerts.length} alertas`"></span>
+              </span>
+            </div>
+            <div class="flex gap-2">
+              <select class="input" style="width:auto;padding:4px 8px;" x-model="alertFilter" @change="loadAlerts()">
+                <option value="unread">Sin leer</option>
+                <option value="all">Todas</option>
+              </select>
+              <button x-show="unreadCount > 0" class="btn btn-secondary btn-sm" @click="markAllRead()">
+                ✓ Leer todas
+              </button>
+            </div>
+          </div>
+
+          <div x-show="alertsLoading" style="padding:32px;text-align:center;">
+            <span class="spin dark"></span>
+          </div>
+
+          <div x-show="!alertsLoading && !alerts.length" class="empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <p x-text="alertFilter === 'unread' ? 'Sin alertas pendientes' : 'Sin alertas'"></p>
+          </div>
+
+          <div x-show="!alertsLoading && alerts.length">
+            <template x-for="a in alerts" :key="a.id">
+              <div class="alert-item" :class="{ unread: !a.isRead }">
+                <div class="alert-dot" :class="{ read: a.isRead }"></div>
+                <div class="alert-content">
+                  <div class="alert-rad" x-text="a.numeroRadicado"></div>
+                  <div class="alert-act" x-text="a.actuacionData?.actuacion ?? 'Nueva actuación'"></div>
+                  <div x-show="a.actuacionData?.anotacion" class="alert-act" style="font-weight:400;color:var(--text-2);font-size:12px;" x-text="a.actuacionData?.anotacion"></div>
+                  <div class="alert-time" x-text="timeAgo(a.createdAt)"></div>
+                </div>
+                <div class="alert-actions">
+                  <button x-show="!a.isRead" class="btn btn-secondary btn-sm" @click="markRead(a)">Leer</button>
+                  <button class="btn btn-danger btn-sm" @click="deleteAlert(a)">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════ CONSULTAR ══ -->
+      <div x-show="tab === 'consultar'">
+        <p class="section-title">Consultar proceso</p>
+        <p class="section-sub">Busca un radicado en la Rama Judicial y analízalo con IA.</p>
+
+        <!-- Search input -->
+        <div class="card card-body" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field" style="flex:1;min-width:240px;margin-bottom:0;">
+            <label class="label">Número de radicado</label>
+            <input
+              type="text"
+              class="input mono"
+              placeholder="23 dígitos"
+              maxlength="23"
+              x-model="searchRad"
+              @keydown.enter="searchProcess()"
+            />
+          </div>
+          <button class="btn btn-primary" @click="searchProcess()" :disabled="searchLoading">
+            <span x-show="searchLoading" class="spin"></span>
+            <svg x-show="!searchLoading" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span x-text="searchLoading ? 'Consultando...' : 'Consultar'"></span>
+          </button>
+        </div>
+
+        <!-- Search results -->
+        <template x-if="searchResult">
+          <div class="mt-4">
+            <template x-if="searchResult.procesos?.length">
+              <div>
+                <template x-for="(proc, i) in searchResult.procesos" :key="i">
+                  <div class="card mt-4">
+                    <div class="card-header">
+                      <div>
+                        <span class="badge badge-blue" x-text="proc.detalle?.tipoProceso ?? 'Proceso'"></span>
+                        <span style="font-size:11px;color:var(--text-3);margin-left:8px;" x-text="proc.despacho"></span>
+                      </div>
+                      <button
+                        class="btn btn-primary btn-sm"
+                        @click="analyze(proc)"
+                        :disabled="analysisLoading"
+                        style="gap:6px;"
+                      >
+                        <span x-show="analysisLoading" class="spin"></span>
+                        <template x-if="!analysisLoading">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        </template>
+                        <span x-text="analysisLoading ? 'Analizando...' : 'Analizar con IA'"></span>
+                      </button>
+                    </div>
+                    <div class="card-body">
+                      <div class="process-meta">
+                        <div class="meta-item">
+                          <div class="meta-label">Tipo</div>
+                          <div class="meta-value" x-text="proc.detalle?.tipoProceso ?? '—'"></div>
+                        </div>
+                        <div class="meta-item">
+                          <div class="meta-label">Clase</div>
+                          <div class="meta-value" x-text="proc.detalle?.claseProceso ?? '—'"></div>
+                        </div>
+                        <div class="meta-item">
+                          <div class="meta-label">Departamento</div>
+                          <div class="meta-value" x-text="proc.departamento ?? '—'"></div>
+                        </div>
+                        <div class="meta-item">
+                          <div class="meta-label">Última actuación</div>
+                          <div class="meta-value" x-text="proc.fechaUltimaActuacion ? proc.fechaUltimaActuacion.split('T')[0] : '—'"></div>
+                        </div>
+                      </div>
+
+                      <!-- Actuaciones recientes -->
+                      <template x-if="proc.actuaciones?.length">
+                        <div>
+                          <p style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Últimas actuaciones</p>
+                          <template x-for="(act, j) in proc.actuaciones.slice(0, 5)" :key="j">
+                            <div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border-light);">
+                              <div style="font-size:11px;color:var(--text-3);white-space:nowrap;font-family:monospace;" x-text="act.fechaActuacion?.split('T')[0] ?? '—'"></div>
+                              <div>
+                                <div style="font-size:13px;font-weight:500;" x-text="act.actuacion"></div>
+                                <div x-show="act.anotacion" style="font-size:12px;color:var(--text-2);margin-top:2px;" x-text="act.anotacion"></div>
+                              </div>
+                            </div>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="!searchResult.procesos?.length">
+              <div class="card mt-4">
+                <div class="empty">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <p>No se encontraron procesos para este radicado</p>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- Análisis IA -->
+        <template x-if="analysis">
+          <div class="analysis-card">
+            <div class="analysis-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--orange)"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span style="font-size:13px;font-weight:600;">Análisis IA</span>
+              <span
+                class="badge"
+                :class="{
+                  'badge-red':   analysis.alertLevel === 'critical',
+                  'badge-amber': analysis.alertLevel === 'warning',
+                  'badge-green': analysis.alertLevel === 'normal'
+                }"
+                x-text="analysis.alertLevel === 'critical' ? 'Crítico' : analysis.alertLevel === 'warning' ? 'Atención' : 'Normal'"
+              ></span>
+            </div>
+            <div class="analysis-body">
+              <div x-show="analysis.alertTitle" style="background:var(--amber-bg);border:1px solid #fde68a;border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;">
+                <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:3px;" x-text="analysis.alertTitle"></div>
+                <div style="font-size:13px;color:var(--text);" x-text="analysis.alertDesc"></div>
+              </div>
+
+              <div class="analysis-section">
+                <div class="analysis-label">Resumen</div>
+                <div class="analysis-text" x-text="analysis.resumen"></div>
+              </div>
+
+              <template x-if="analysis.acciones?.length">
+                <div class="analysis-section">
+                  <div class="analysis-label">Acciones recomendadas</div>
+                  <template x-for="(acc, i) in analysis.acciones" :key="i">
+                    <div class="accion-item">
+                      <span
+                        class="badge"
+                        style="flex-shrink:0;margin-top:1px;"
+                        :class="{
+                          'badge-red':   acc.nivel === 'critical',
+                          'badge-amber': acc.nivel === 'warning',
+                          'badge-blue':  acc.nivel === 'normal'
+                        }"
+                        x-text="acc.nivel === 'critical' ? 'Urgente' : acc.nivel === 'warning' ? 'Pronto' : 'Info'"
+                      ></span>
+                      <div style="flex:1;">
+                        <div style="font-size:13px;color:var(--text);" x-text="acc.texto"></div>
+                        <div x-show="acc.plazo" style="font-size:11px;color:var(--text-3);margin-top:2px;" x-text="acc.plazo"></div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <div class="analysis-section">
+                <div class="analysis-label">Próximo paso</div>
+                <div class="analysis-text" style="font-weight:500;" x-text="analysis.proximoPaso"></div>
+              </div>
+
+              <template x-if="analysis.observaciones">
+                <div class="analysis-section">
+                  <div class="analysis-label">Observaciones</div>
+                  <div class="analysis-text" style="color:var(--text-2);" x-text="analysis.observaciones"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- ══════════════════════════ AJUSTES ══ -->
+      <div x-show="tab === 'ajustes'">
+        <p class="section-title">Ajustes</p>
+        <p class="section-sub">Estado de la instancia y configuración de acceso.</p>
+
+        <div style="display:grid;gap:16px;">
+
+          <!-- Instance info -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Instancia</span></div>
+            <div class="card-body">
+              <div class="process-meta">
+                <div class="meta-item">
+                  <div class="meta-label">Nombre</div>
+                  <div class="meta-value" x-text="health?.instance ?? '—'"></div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Versión</div>
+                  <div class="meta-value" x-text="health?.version ?? '—'"></div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Uptime</div>
+                  <div class="meta-value" x-text="health?.uptime ? formatUptime(health.uptime) : '—'"></div>
+                </div>
+                <div class="meta-item">
+                  <div class="meta-label">Base de datos</div>
+                  <div class="meta-value">
+                    <span class="badge" :class="health?.db ? 'badge-green' : 'badge-red'" x-text="health?.db ? 'OK' : 'Error'"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- API Key -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Acceso</span></div>
+            <div class="card-body">
+              <div class="field">
+                <label class="label">API Key activa</label>
+                <div style="display:flex;gap:8px;">
+                  <input
+                    :type="showKey ? 'text' : 'password'"
+                    class="input mono"
+                    :value="apiKey"
+                    readonly
+                    style="flex:1;"
+                  />
+                  <button class="btn btn-secondary btn-sm" @click="showKey = !showKey" style="flex-shrink:0;">
+                    <span x-text="showKey ? 'Ocultar' : 'Mostrar'"></span>
+                  </button>
+                </div>
+              </div>
+              <button class="btn btn-danger btn-sm" @click="logout()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div
+    x-show="toast.show"
+    x-transition.opacity
+    class="toast"
+    :class="toast.type"
+    x-text="toast.msg"
+    style="display:none;"
+  ></div>
+
+<script>
+function app() {
+  return {
+    // Auth
+    loginKey: '',
+    apiKey: localStorage.getItem('cv_api_key') || '',
+    authenticated: false,
+    authLoading: false,
+    authError: '',
+
+    // Nav
+    tab: 'radicados',
+
+    // Health
+    health: null,
+
+    // Watches
+    watches: [],
+    watchesLoading: false,
+    showAddForm: false,
+    newWatch: { numeroRadicado: '', label: '' },
+    addingWatch: false,
+
+    // Alerts
+    alerts: [],
+    alertsLoading: false,
+    alertFilter: 'unread',
+
+    // Consultar
+    searchRad: '',
+    searchResult: null,
+    searchLoading: false,
+    analysis: null,
+    analysisLoading: false,
+
+    // UI
+    showKey: false,
+    toast: { show: false, msg: '', type: 'success' },
+
+    async init() {
+      if (this.apiKey) await this.tryConnect();
+    },
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    async login() {
+      this.authError = '';
+      if (!this.loginKey.trim()) { this.authError = 'Ingresa tu API key'; return; }
+      this.authLoading = true;
+      this.apiKey = this.loginKey.trim();
+      const ok = await this.tryConnect();
+      if (!ok) { this.authError = 'API key inválida o servidor no disponible'; this.apiKey = ''; }
+      this.authLoading = false;
+    },
+
+    async tryConnect() {
+      try {
+        const r = await this.get('/api/v1/health');
+        if (!r.ok) return false;
+        const body = await r.json();
+        this.health = { instance: body.instance, version: body.version, uptime: body.uptime, db: body.database === 'ok' };
+        localStorage.setItem('cv_api_key', this.apiKey);
+        this.authenticated = true;
+        await Promise.all([this.loadWatches(), this.loadAlerts()]);
+        return true;
+      } catch { return false; }
+    },
+
+    logout() {
+      localStorage.removeItem('cv_api_key');
+      this.apiKey = ''; this.loginKey = ''; this.authenticated = false;
+      this.watches = []; this.alerts = []; this.health = null;
+    },
+
+    // ── Watches ──────────────────────────────────────────────────────────────
+    async loadWatches() {
+      this.watchesLoading = true;
+      try {
+        const r = await this.get('/api/v1/vigilance/watches');
+        if (r.ok) { const b = await r.json(); this.watches = b.data ?? []; }
+      } finally { this.watchesLoading = false; }
+    },
+
+    async addWatch() {
+      if (!this.newWatch.numeroRadicado.trim()) return;
+      this.addingWatch = true;
+      try {
+        const r = await this.post('/api/v1/vigilance/watches', {
+          numeroRadicado: this.newWatch.numeroRadicado.trim(),
+          label: this.newWatch.label.trim() || undefined,
+        });
+        if (r.ok) {
+          const b = await r.json();
+          this.watches.unshift(b.data);
+          this.newWatch = { numeroRadicado: '', label: '' };
+          this.showAddForm = false;
+          this.showToast('Radicado agregado');
+        } else {
+          const b = await r.json();
+          this.showToast(b.detail || 'Error al agregar', 'error');
+        }
+      } finally { this.addingWatch = false; }
+    },
+
+    async toggleWatch(w) {
+      const r = await this.patch(`/api/v1/vigilance/watches/${w.id}`, { isActive: !w.isActive });
+      if (r.ok) { w.isActive = !w.isActive; this.showToast(w.isActive ? 'Activado' : 'Desactivado'); }
+    },
+
+    async checkWatch(w) {
+      w._checking = true;
+      try {
+        const r = await this.post(`/api/v1/vigilance/watches/${w.id}/check`, {});
+        if (r.ok) {
+          w.lastCheckedAt = new Date().toISOString();
+          this.showToast('Verificación completada');
+          await this.loadAlerts();
+        } else { this.showToast('Error al verificar', 'error'); }
+      } finally { w._checking = false; }
+    },
+
+    async deleteWatch(w) {
+      if (!confirm(`¿Eliminar vigilancia del radicado ${w.numeroRadicado}?`)) return;
+      const r = await this.del(`/api/v1/vigilance/watches/${w.id}`);
+      if (r.ok) {
+        this.watches = this.watches.filter(x => x.id !== w.id);
+        this.showToast('Radicado eliminado');
+      }
+    },
+
+    // ── Alerts ───────────────────────────────────────────────────────────────
+    get unreadCount() {
+      return this.alerts.filter(a => !a.isRead).length;
+    },
+
+    async loadAlerts() {
+      this.alertsLoading = true;
+      try {
+        const params = this.alertFilter === 'unread' ? '?isRead=false&limit=50' : '?limit=50';
+        const r = await this.get(`/api/v1/vigilance/alerts${params}`);
+        if (r.ok) { const b = await r.json(); this.alerts = b.data ?? []; }
+      } finally { this.alertsLoading = false; }
+    },
+
+    async markRead(a) {
+      const r = await this.patch(`/api/v1/vigilance/alerts/${a.id}/read`, {});
+      if (r.ok) { a.isRead = true; }
+    },
+
+    async markAllRead() {
+      const r = await this.post('/api/v1/vigilance/alerts/read-all', {});
+      if (r.ok) { this.alerts.forEach(a => a.isRead = true); this.showToast('Todas marcadas como leídas'); }
+    },
+
+    async deleteAlert(a) {
+      const r = await this.del(`/api/v1/vigilance/alerts/${a.id}`);
+      if (r.ok) { this.alerts = this.alerts.filter(x => x.id !== a.id); }
+    },
+
+    // ── Consultar ────────────────────────────────────────────────────────────
+    async searchProcess() {
+      if (!this.searchRad.trim()) return;
+      this.searchLoading = true;
+      this.searchResult = null;
+      this.analysis = null;
+      try {
+        const r = await this.get(`/api/v1/vigilance/radicado/${this.searchRad.trim()}`);
+        if (r.ok) { const b = await r.json(); this.searchResult = b.data; }
+        else { this.showToast('No se pudo consultar el radicado', 'error'); }
+      } finally { this.searchLoading = false; }
+    },
+
+    async analyze(proc) {
+      this.analysisLoading = true;
+      this.analysis = null;
+      try {
+        const r = await this.post(`/api/v1/agent/analyze/${this.searchRad.trim()}`, {});
+        if (r.ok) { const b = await r.json(); this.analysis = b.data?.analysis ?? b.data; }
+        else { this.showToast('Error al analizar con IA', 'error'); }
+      } finally { this.analysisLoading = false; }
+    },
+
+    // ── HTTP helpers ─────────────────────────────────────────────────────────
+    headers() {
+      return { 'Content-Type': 'application/json', 'X-API-Key': this.apiKey };
+    },
+    get(url)        { return fetch(url, { headers: this.headers() }); },
+    post(url, body) { return fetch(url, { method: 'POST',   headers: this.headers(), body: JSON.stringify(body) }); },
+    patch(url, body){ return fetch(url, { method: 'PATCH',  headers: this.headers(), body: JSON.stringify(body) }); },
+    del(url)        { return fetch(url, { method: 'DELETE', headers: this.headers() }); },
+
+    // ── Utils ────────────────────────────────────────────────────────────────
+    showToast(msg, type = 'success') {
+      this.toast = { show: true, msg, type };
+      setTimeout(() => { this.toast.show = false; }, 3000);
+    },
+
+    timeAgo(iso) {
+      if (!iso) return '—';
+      const diff = Date.now() - new Date(iso).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1)  return 'Ahora mismo';
+      if (mins < 60) return `hace ${mins} min`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24)  return `hace ${hrs}h`;
+      const days = Math.floor(hrs / 24);
+      return `hace ${days} día${days !== 1 ? 's' : ''}`;
+    },
+
+    formatUptime(secs) {
+      const h = Math.floor(secs / 3600);
+      const m = Math.floor((secs % 3600) / 60);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    },
+  };
+}
+</script>
+</body>
+</html>

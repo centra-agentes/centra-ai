@@ -1,0 +1,62 @@
+version: '3.8'
+
+# ─── CentraVigía Agent — Despliegue local ─────────────────────────────────────
+# Uso: docker compose up -d
+# El agente quedará disponible en http://localhost:4000
+
+services:
+  agent:
+    build: .
+    container_name: centravigia-agent
+    ports:
+      - "4000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Base de datos (usa el servicio 'db' de abajo)
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-centravigia}
+      DB_PASSWORD: ${DB_PASSWORD:-centravigia}
+      DB_NAME: ${DB_NAME:-centravigia_agent}
+      DB_SSL: false
+      # Configuración Rama Judicial
+      RAMA_BASE_URL: https://consultaprocesos.ramajudicial.gov.co/api/Procesos
+      RAMA_V2_BASE_URL: https://consultaprocesos.ramajudicial.gov.co:448/api/v2
+      RAMA_PUBLICACIONES_URL: https://publicacionesprocesales.ramajudicial.gov.co
+      RAMA_TIMEOUT_MS: 15000
+      # ⚠️ Configura estas variables en tu .env local
+      MASTER_API_KEY: ${MASTER_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AGENT_INSTANCE_NAME: ${AGENT_INSTANCE_NAME:-mi-firma}
+      AGENT_PUBLIC_URL: ${AGENT_PUBLIC_URL:-http://localhost:4000}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/v1/health/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  db:
+    image: postgres:16-alpine
+    container_name: centravigia-db
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-centravigia}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-centravigia}
+      POSTGRES_DB: ${DB_NAME:-centravigia_agent}
+    volumes:
+      - centravigia_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-centravigia}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  centravigia_db:
+    driver: local
