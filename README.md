@@ -111,3 +111,4 @@ Cada conector judicial es un módulo independiente. Cuando Rama Judicial cambie 
 - **Tu API key de Claude:** tus costos, tus datos, tu control
 - **Conectores modulares:** cada fuente judicial es independiente
 - **API abierta:** cualquier frontend puede conectarse vía REST
+# centra-ai
