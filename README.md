@@ -112,3 +112,4 @@ Cada conector judicial es un módulo independiente. Cuando Rama Judicial cambie 
 - **Conectores modulares:** cada fuente judicial es independiente
 - **API abierta:** cualquier frontend puede conectarse vía REST
 # centra-ai
+# centra-ai
