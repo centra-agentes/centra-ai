@@ -5,7 +5,7 @@
 
 set -e
 
-IMAGE="centra-agentes/centravigia"
+IMAGE="daimer003/centravigia"
 TAG="${1:-latest}"
 
 echo ""
@@ -25,20 +25,22 @@ if ! docker system info 2>/dev/null | grep -q "Username"; then
   docker login
 fi
 
-echo "  Construyendo imagen: ${IMAGE}:${TAG}"
-docker build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${TAG}" .
-
-if [ "${TAG}" != "latest" ]; then
-  echo "  Etiquetando también como :latest"
-  docker tag "${IMAGE}:${TAG}" "${IMAGE}:latest"
+# Crear builder multi-plataforma si no existe
+if ! docker buildx inspect centra-builder &>/dev/null; then
+  echo "  Creando builder multi-plataforma..."
+  docker buildx create --name centra-builder --use
+else
+  docker buildx use centra-builder
 fi
 
-echo "  Publicando ${IMAGE}:${TAG}..."
-docker push "${IMAGE}:${TAG}"
-
+PLATFORMS="linux/amd64,linux/arm64"
+TAGS="-t ${IMAGE}:${TAG}"
 if [ "${TAG}" != "latest" ]; then
-  docker push "${IMAGE}:latest"
+  TAGS="${TAGS} -t ${IMAGE}:latest"
 fi
+
+echo "  Construyendo y publicando: ${IMAGE}:${TAG} (${PLATFORMS})"
+docker buildx build --platform "${PLATFORMS}" ${TAGS} --push .
 
 echo ""
 echo "  ✓ Imagen publicada: docker.io/${IMAGE}:${TAG}"

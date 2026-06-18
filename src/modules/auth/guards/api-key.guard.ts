@@ -32,6 +32,13 @@ export class ApiKeyGuard implements CanActivate {
       );
     }
 
+    // Master key bypass — allows dashboard login with the admin credential
+    const masterKey = process.env.MASTER_API_KEY;
+    if (masterKey && rawKey === masterKey) {
+      request['apiKey'] = { id: 'master', name: 'Master Admin', isActive: true };
+      return true;
+    }
+
     const apiKey = await this.authService.validateKey(rawKey);
     if (!apiKey) {
       throw new UnauthorizedException('API key inválida, expirada o desactivada');

@@ -13,7 +13,7 @@ export default registerAs('database', (): TypeOrmModuleOptions => {
           : false,
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: process.env.NODE_ENV !== 'production' || process.env.DB_SYNCHRONIZE === 'true',
       logging: process.env.NODE_ENV === 'development',
       autoLoadEntities: true,
     };
@@ -28,7 +28,7 @@ export default registerAs('database', (): TypeOrmModuleOptions => {
     database: process.env.DB_NAME || 'rama_judicial',
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-    synchronize: process.env.NODE_ENV !== 'production',
+    synchronize: process.env.NODE_ENV !== 'production' || process.env.DB_SYNCHRONIZE === 'true',
     logging: process.env.NODE_ENV === 'development',
     autoLoadEntities: true,
   };
