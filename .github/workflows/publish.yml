@@ -1,0 +1,68 @@
+name: Build & Publish Docker Image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+env:
+  IMAGE: daimer003/centravigia
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Resolve tags and version
+        id: meta
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            echo "tags=${{ env.IMAGE }}:${VERSION},${{ env.IMAGE }}:latest" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}"                                        >> $GITHUB_OUTPUT
+            echo "is_release=true"                                           >> $GITHUB_OUTPUT
+          else
+            echo "tags=${{ env.IMAGE }}:latest" >> $GITHUB_OUTPUT
+            echo "version="                     >> $GITHUB_OUTPUT
+            echo "is_release=false"             >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Solo en releases (tag v*): actualiza latest_version en Supabase
+      # → badge "Nueva versión" aparece automáticamente para todos los usuarios
+      - name: Update latest_version in Supabase
+        if: steps.meta.outputs.is_release == 'true'
+        run: |
+          curl -sf -X PATCH \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/catalog_agents?id=eq.centravigia" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"latest_version\": \"${{ steps.meta.outputs.version }}\"}"

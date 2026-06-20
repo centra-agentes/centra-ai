@@ -129,9 +129,9 @@
     .accion-item:last-child { margin-bottom: 0; }
 
     /* ── Empty state ───────────────────────────────── */
-    .empty { padding: 48px 20px; text-align: center; color: var(--text-3); }
-    .empty svg { width: 36px; height: 36px; margin: 0 auto 12px; opacity: .3; }
-    .empty p { font-size: 13px; }
+    .empty { padding: 56px 20px; text-align: center; color: var(--text-3); }
+    .empty svg { width: 40px; height: 40px; margin: 0 auto 14px; opacity: .22; }
+    .empty p { font-size: 13px; line-height: 1.6; }
 
     /* ── Inline form ───────────────────────────────── */
     .inline-form { background: var(--surface); border-top: 1px solid var(--border-light); padding: 16px 20px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
@@ -156,6 +156,37 @@
     .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
     .spin.dark { border-color: rgba(24,24,27,.15); border-top-color: var(--primary); }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Visual refinements ────────────────────────────── */
+    @keyframes pulse-dot {
+      0%,100% { opacity:1; box-shadow: 0 0 0 0 rgba(74,222,128,.45); }
+      60%      { opacity:.8; box-shadow: 0 0 0 5px rgba(74,222,128,0); }
+    }
+    .dot:not(.err) { animation: pulse-dot 2.8s ease-in-out infinite; }
+
+    .login-wrap {
+      background-color: var(--surface);
+      background-image: radial-gradient(circle, #d4d4d8 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+    .login-card { border-top: 3px solid var(--primary); }
+
+    .header { box-shadow: 0 1px 0 rgba(255,255,255,.07), 0 2px 12px rgba(0,0,0,.14); }
+
+    .tab { transition: color .15s, background .15s; }
+    .tab:hover:not(.active) { background: var(--surface); border-radius: 8px 8px 0 0; }
+
+    .card { transition: box-shadow .18s; }
+
+    .alert-item.unread { border-left: 3px solid var(--amber); padding-left: 17px; }
+
+    .btn { transition: background .15s, opacity .15s, transform .08s; }
+    .btn:active:not(:disabled) { transform: scale(.98); }
+
+    @keyframes toast-in { from { transform: translateY(8px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+    .toast { animation: toast-in .22s ease; }
+
+    .analysis-header { background: linear-gradient(to right, #fff 0%, #fafafa 100%); }
   </style>
 </head>
 <body x-data="app()" x-init="init()" x-cloak>
@@ -169,7 +200,8 @@
         </svg>
         CentraVigía
       </div>
-      <p class="login-sub">Ingresa tu API key para acceder al dashboard</p>
+      <p style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:20px;">Vigilancia Judicial Inteligente</p>
+      <p class="login-sub" style="margin-top:-14px;">Ingresa tu API key para acceder al dashboard</p>
 
       <div class="field">
         <label class="label">API Key</label>
@@ -196,6 +228,9 @@
       <p style="font-size:11px;color:var(--text-3);margin-top:20px;text-align:center;">
         La API key se guarda localmente en tu navegador
       </p>
+      <p style="font-size:10px;color:var(--text-3);margin-top:28px;text-align:center;border-top:1px solid var(--border-light);padding-top:16px;">
+        Powered by <strong style="color:var(--text-2);">Centra Technologies</strong>
+      </p>
     </div>
   </div>
 
@@ -211,6 +246,7 @@
         CentraVigía
         <span class="header-instance" x-text="health?.instance ?? ''"></span>
       </div>
+      <span x-show="health?.version" style="font-size:10px;font-weight:600;letter-spacing:.04em;color:rgba(255,255,255,.25);margin-left:2px;" x-text="health?.version ? `v${health.version}` : ''"></span>
       <div class="header-spacer"></div>
       <div class="header-status">
         <span class="dot" :class="{ err: !health?.db }"></span>
