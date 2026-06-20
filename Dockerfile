@@ -12,6 +12,9 @@ RUN npm run build
 # ─── Stage 2: Production ─────────────────────────────────────────────────────
 FROM node:20-alpine AS production
 
+ARG APP_VERSION=dev
+ENV npm_package_version=$APP_VERSION
+
 WORKDIR /app
 
 # Instalar solo dependencias de producción
