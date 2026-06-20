@@ -52,8 +52,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: APP_VERSION=${{ steps.meta.outputs.version || 'dev' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE }}:latest
+          cache-to: type=inline
 
       # Solo en releases (tag v*): actualiza latest_version en Supabase
       # → badge "Nueva versión" aparece automáticamente para todos los usuarios
