@@ -22,11 +22,25 @@ export class VigAlertEntity {
   @Column({ name: 'numero_radicado', length: 30 })
   numeroRadicado: string;
 
-  @Column({ name: 'id_proceso', type: 'bigint' })
+  @Column({
+    name: 'id_proceso',
+    type: 'bigint',
+    transformer: {
+      to: (v: number) => v,
+      from: (v: string) => Number(v),
+    },
+  })
   idProceso: number;
 
   /** idRegActuacion from the Rama Judicial API */
-  @Column({ name: 'actuacion_id', type: 'int' })
+  @Column({
+    name: 'actuacion_id',
+    type: 'bigint',
+    transformer: {
+      to: (v: number) => v,
+      from: (v: string) => Number(v),
+    },
+  })
   actuacionId: number;
 
   /** Full actuacion payload snapshot */

@@ -32,7 +32,16 @@ export class VigWatchEntity {
   lastCheckedAt: Date | null;
 
   /** idRegActuacion of the most recent actuacion seen at last successful check */
-  @Column({ name: 'last_known_actuacion_id', type: 'int', nullable: true, default: null })
+  @Column({
+    name: 'last_known_actuacion_id',
+    type: 'bigint',
+    nullable: true,
+    default: null,
+    transformer: {
+      to: (v: number | null) => v,
+      from: (v: string | null) => (v !== null ? Number(v) : null),
+    },
+  })
   lastKnownActuacionId: number | null;
 
   @Column({ name: 'consecutive_failures', default: 0 })
