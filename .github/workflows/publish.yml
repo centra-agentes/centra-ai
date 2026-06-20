@@ -59,10 +59,19 @@ jobs:
       - name: Update latest_version in Supabase
         if: steps.meta.outputs.is_release == 'true'
         run: |
-          curl -sf -X PATCH \
+          echo "Updating catalog_agents.latest_version to ${{ steps.meta.outputs.version }}"
+          HTTP_STATUS=$(curl -w "%{http_code}" -o /tmp/supabase_response.json \
+            -X PATCH \
             "${{ secrets.SUPABASE_URL }}/rest/v1/catalog_agents?id=eq.centravigia" \
             -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
-            -d "{\"latest_version\": \"${{ steps.meta.outputs.version }}\"}"
+            -d "{\"latest_version\": \"${{ steps.meta.outputs.version }}\"}")
+          echo "HTTP status: $HTTP_STATUS"
+          cat /tmp/supabase_response.json || true
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "ERROR: Supabase update failed with HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          echo "Supabase updated successfully"
