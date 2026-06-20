@@ -1,6 +1,6 @@
 {
   "name": "rama-judicial-api",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "API wrapper para consultas de la Rama Judicial de Colombia",
   "author": "",
   "private": true,

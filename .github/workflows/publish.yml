@@ -38,10 +38,12 @@ jobs:
             echo "tags=${{ env.IMAGE }}:${VERSION},${{ env.IMAGE }}:latest" >> $GITHUB_OUTPUT
             echo "version=${VERSION}"                                        >> $GITHUB_OUTPUT
             echo "is_release=true"                                           >> $GITHUB_OUTPUT
+            echo "should_push=true"                                          >> $GITHUB_OUTPUT
           else
-            echo "tags=${{ env.IMAGE }}:latest" >> $GITHUB_OUTPUT
-            echo "version="                     >> $GITHUB_OUTPUT
-            echo "is_release=false"             >> $GITHUB_OUTPUT
+            echo "tags=${{ env.IMAGE }}:dev" >> $GITHUB_OUTPUT
+            echo "version="                  >> $GITHUB_OUTPUT
+            echo "is_release=false"          >> $GITHUB_OUTPUT
+            echo "should_push=false"         >> $GITHUB_OUTPUT
           fi
 
       - name: Build and push
