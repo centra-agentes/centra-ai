@@ -4,13 +4,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      release:
-        description: 'Marcar como release (actualiza latest_version en Supabase)'
-        type: boolean
-        default: false
-        required: false
 
 env:
   IMAGE: daimer003/centravigia
@@ -54,10 +47,9 @@ jobs:
           cache-to: type=inline
 
       - name: Update latest_version in Supabase
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release == 'true' }}
         run: |
           VERSION="${{ steps.pkg.outputs.version }}"
-          echo "Releasing v${VERSION} — updating Supabase catalog_agents..."
+          echo "Updating catalog_agents.latest_version to ${VERSION}"
           HTTP_STATUS=$(curl -w "%{http_code}" -o /tmp/supabase_response.json \
             -X PATCH \
             "${{ secrets.SUPABASE_URL }}/rest/v1/catalog_agents?id=eq.centravigia" \
