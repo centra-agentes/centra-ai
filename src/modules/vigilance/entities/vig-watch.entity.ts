@@ -42,6 +42,10 @@ export class VigWatchEntity {
   @Column({ name: 'next_check_at', type: 'timestamptz', nullable: true, default: null })
   nextCheckAt: Date | null;
 
+  /** User-defined date to trigger a one-time check and receive updates */
+  @Column({ name: 'scheduled_check_at', type: 'timestamptz', nullable: true, default: null })
+  scheduledCheckAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

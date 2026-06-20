@@ -309,8 +309,9 @@
                   <th></th>
                 </tr>
               </thead>
-              <tbody>
-                <template x-for="w in watches" :key="w.id">
+              <template x-for="w in watches" :key="w.id">
+                <tbody>
+                  <!-- Main row -->
                   <tr>
                     <td>
                       <div class="text-mono truncate" style="max-width:220px" x-text="w.numeroRadicado"></div>
@@ -324,6 +325,18 @@
                       <span x-show="w.consecutiveFailures > 0" class="badge badge-amber" style="margin-left:4px;">
                         <span x-text="`${w.consecutiveFailures} fallo${w.consecutiveFailures !== 1 ? 's' : ''}`"></span>
                       </span>
+                      <!-- Scheduled badge -->
+                      <div x-show="w.scheduledCheckAt" style="display:flex;align-items:center;gap:4px;margin-top:5px;">
+                        <span class="badge badge-amber" style="font-size:10px;gap:4px;">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          <span x-text="fmtScheduled(w.scheduledCheckAt)"></span>
+                        </span>
+                        <button
+                          @click="clearSchedule(w)"
+                          style="background:none;border:none;cursor:pointer;color:var(--text-3);padding:0;line-height:1;font-size:14px;"
+                          title="Cancelar programación"
+                        >&times;</button>
+                      </div>
                     </td>
                     <td style="color:var(--text-2);" x-text="w.lastCheckedAt ? timeAgo(w.lastCheckedAt) : 'Sin verificar'"></td>
                     <td>
@@ -336,6 +349,15 @@
                         >
                           <span x-show="w._checking" class="spin dark" style="width:10px;height:10px;"></span>
                           <svg x-show="!w._checking" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        </button>
+                        <button
+                          class="btn btn-secondary btn-sm"
+                          @click="w._scheduling = !w._scheduling"
+                          :class="{ 'btn-amber-active': w.scheduledCheckAt }"
+                          :style="w._scheduling ? 'background:var(--amber-bg);color:var(--amber);border-color:#fde68a;' : ''"
+                          title="Programar consulta"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         </button>
                         <button
                           class="btn btn-secondary btn-sm"
@@ -354,8 +376,36 @@
                       </div>
                     </td>
                   </tr>
-                </template>
-              </tbody>
+                  <!-- Schedule form row -->
+                  <tr x-show="w._scheduling" style="background:var(--amber-bg);">
+                    <td colspan="4" style="padding:14px 20px;border-top:1px solid #fde68a;">
+                      <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:140px;">
+                          <label class="label" style="color:var(--amber);">Fecha</label>
+                          <input type="date" class="input" x-model="w._schedDate" style="font-size:13px;" />
+                        </div>
+                        <div style="width:110px;">
+                          <label class="label" style="color:var(--amber);">Hora</label>
+                          <input type="time" class="input" x-model="w._schedTime" style="font-size:13px;" />
+                        </div>
+                        <div style="flex:1;min-width:200px;">
+                          <label class="label" style="color:var(--text-3);">El agente consultará el radicado en esa fecha y te notificará si hay novedades.</label>
+                        </div>
+                        <button
+                          class="btn btn-primary btn-sm"
+                          @click="scheduleCheck(w)"
+                          :disabled="!w._schedDate || w._saving"
+                          style="flex-shrink:0;background:var(--amber);margin-bottom:0;"
+                        >
+                          <span x-show="w._saving" class="spin"></span>
+                          <span x-text="w._saving ? 'Guardando...' : 'Programar'"></span>
+                        </button>
+                        <button class="btn btn-secondary btn-sm" @click="w._scheduling = false" style="flex-shrink:0;margin-bottom:0;">Cancelar</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </template>
             </table>
           </div>
 
@@ -754,7 +804,17 @@ function app() {
       this.watchesLoading = true;
       try {
         const r = await this.get('/api/v1/vigilance/watches');
-        if (r.ok) { const b = await r.json(); this.watches = b.data ?? []; }
+        if (r.ok) {
+          const b = await r.json();
+          this.watches = (b.data ?? []).map(w => ({
+            ...w,
+            _checking: false,
+            _scheduling: false,
+            _saving: false,
+            _schedDate: w.scheduledCheckAt ? w.scheduledCheckAt.split('T')[0] : '',
+            _schedTime: w.scheduledCheckAt ? w.scheduledCheckAt.substring(11, 16) : '08:00',
+          }));
+        }
       } finally { this.watchesLoading = false; }
     },
 
@@ -768,7 +828,7 @@ function app() {
         });
         if (r.ok) {
           const b = await r.json();
-          this.watches.unshift(b.data);
+          this.watches.unshift({ ...b.data, _checking: false, _scheduling: false, _saving: false, _schedDate: '', _schedTime: '08:00' });
           this.newWatch = { numeroRadicado: '', label: '' };
           this.showAddForm = false;
           this.showToast('Radicado agregado');
@@ -794,6 +854,35 @@ function app() {
           await this.loadAlerts();
         } else { this.showToast('Error al verificar', 'error'); }
       } finally { w._checking = false; }
+    },
+
+    async scheduleCheck(w) {
+      if (!w._schedDate) return;
+      w._saving = true;
+      const time = w._schedTime || '08:00';
+      const iso = new Date(`${w._schedDate}T${time}:00`).toISOString();
+      try {
+        const r = await this.patch(`/api/v1/vigilance/watches/${w.id}`, { scheduledCheckAt: iso });
+        if (r.ok) {
+          w.scheduledCheckAt = iso;
+          w._scheduling = false;
+          this.showToast(`Consulta programada para el ${this.fmtScheduled(iso)}`);
+        } else { this.showToast('No se pudo programar', 'error'); }
+      } finally { w._saving = false; }
+    },
+
+    async clearSchedule(w) {
+      const r = await this.patch(`/api/v1/vigilance/watches/${w.id}`, { scheduledCheckAt: null });
+      if (r.ok) { w.scheduledCheckAt = null; this.showToast('Programación cancelada'); }
+    },
+
+    fmtScheduled(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      const h = d.getHours().toString().padStart(2, '0');
+      const m = d.getMinutes().toString().padStart(2, '0');
+      return `${d.getDate()} ${months[d.getMonth()]} ${h}:${m}`;
     },
 
     async deleteWatch(w) {

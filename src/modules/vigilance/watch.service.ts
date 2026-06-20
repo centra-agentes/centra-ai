@@ -58,6 +58,21 @@ export class WatchService {
     });
   }
 
+  /** Returns active watches with a scheduled check that is now due */
+  findScheduledDue(): Promise<VigWatchEntity[]> {
+    return this.repo.find({
+      where: {
+        isActive: true,
+        scheduledCheckAt: LessThanOrEqual(new Date()),
+      },
+    });
+  }
+
+  /** Clears the scheduled check after it fires */
+  clearScheduledCheck(id: string): Promise<void> {
+    return this.repo.update(id, { scheduledCheckAt: null }).then(() => undefined);
+  }
+
   /** Records a successful poll result and schedules the next check */
   async markChecked(id: string, lastKnownActuacionId: number | null): Promise<void> {
     await this.repo.update(id, {

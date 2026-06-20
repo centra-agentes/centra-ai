@@ -16,6 +16,22 @@ export class MonitoringService {
     private readonly vigilanceService: VigilanceService,
   ) {}
 
+  @Cron('0 * * * *')
+  async runScheduledChecks(): Promise<void> {
+    const watches = await this.watchService.findScheduledDue();
+    if (!watches.length) return;
+
+    this.logger.log(`Scheduled checks: ${watches.length} watch(es) due`);
+    for (const watch of watches) {
+      try {
+        await this.checkWatch(watch);
+      } catch {
+        // failure already recorded inside checkWatch
+      }
+      await this.watchService.clearScheduledCheck(watch.id);
+    }
+  }
+
   @Cron('*/15 * * * *')
   async runPollingCycle(): Promise<void> {
     if (this.isRunning) {
