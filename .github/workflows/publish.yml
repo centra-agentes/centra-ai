@@ -6,6 +6,11 @@ on:
       - main
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.0.9) — omit "v" prefix'
+        required: true
 
 env:
   IMAGE: daimer003/centravigia
@@ -33,17 +38,25 @@ jobs:
       - name: Resolve tags and version
         id: meta
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+          if [[ -n "${{ github.event.inputs.version }}" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            IS_RELEASE=true
+          elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
-            echo "tags=${{ env.IMAGE }}:${VERSION},${{ env.IMAGE }}:latest" >> $GITHUB_OUTPUT
-            echo "version=${VERSION}"                                        >> $GITHUB_OUTPUT
-            echo "is_release=true"                                           >> $GITHUB_OUTPUT
-            echo "should_push=true"                                          >> $GITHUB_OUTPUT
+            IS_RELEASE=true
           else
-            echo "tags=${{ env.IMAGE }}:dev" >> $GITHUB_OUTPUT
-            echo "version="                  >> $GITHUB_OUTPUT
-            echo "is_release=false"          >> $GITHUB_OUTPUT
-            echo "should_push=false"         >> $GITHUB_OUTPUT
+            VERSION=""
+            IS_RELEASE=false
+          fi
+
+          if [[ "$IS_RELEASE" == "true" ]]; then
+            printf "tags<<EOF\n${{ env.IMAGE }}:${VERSION}\n${{ env.IMAGE }}:latest\nEOF\n" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "is_release=true"   >> $GITHUB_OUTPUT
+          else
+            printf "tags<<EOF\n${{ env.IMAGE }}:dev\nEOF\n" >> $GITHUB_OUTPUT
+            echo "version="          >> $GITHUB_OUTPUT
+            echo "is_release=false"  >> $GITHUB_OUTPUT
           fi
 
       - name: Build and push
@@ -57,8 +70,24 @@ jobs:
           cache-from: type=registry,ref=${{ env.IMAGE }}:latest
           cache-to: type=inline
 
-      # Solo en releases (tag v*): actualiza latest_version en Supabase
-      # → badge "Nueva versión" aparece automáticamente para todos los usuarios
+      - name: Verify versioned tag on Docker Hub
+        if: steps.meta.outputs.is_release == 'true'
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          echo "Verifying daimer003/centravigia:${VERSION} exists on Docker Hub..."
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -o /dev/null -w "%{http_code}" -s \
+              "https://hub.docker.com/v2/repositories/daimer003/centravigia/tags/${VERSION}")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" == "200" ]; then
+              echo "Tag :${VERSION} confirmed on Docker Hub"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "ERROR: Tag :${VERSION} not found on Docker Hub after 5 attempts"
+          exit 1
+
       - name: Update latest_version in Supabase
         if: steps.meta.outputs.is_release == 'true'
         run: |
