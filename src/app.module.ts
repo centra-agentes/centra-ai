@@ -17,6 +17,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ApiKeyGuard } from './modules/auth/guards/api-key.guard';
 import { AgentModule } from './modules/agent/agent.module';
 import { LicenseModule } from './modules/license/license.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { LicenseModule } from './modules/license/license.module';
     VigilanceModule,
     AgentModule,
     LicenseModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [

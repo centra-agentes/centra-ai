@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { VigilanceService, ProcesoCompleto } from '../vigilance/vigilance.service';
+import { AdminService } from '../admin/admin.service';
 
 export interface AgentAnalysis {
   resumen: string;
@@ -33,6 +34,7 @@ export class AgentService {
   constructor(
     private readonly configService: ConfigService,
     private readonly vigilanceService: VigilanceService,
+    private readonly adminService: AdminService,
   ) {}
 
   async analyzeRadicado(radicado: string): Promise<AgentResult> {
@@ -79,7 +81,7 @@ export class AgentService {
     radicado: string,
     proceso: ProcesoCompleto | null,
   ): Promise<AgentAnalysis> {
-    const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
+    const apiKey = await this.adminService.getAnthropicKey();
     if (!apiKey) {
       this.logger.warn('[Agent] ANTHROPIC_API_KEY no configurada — retornando análisis básico');
       return this.fallbackAnalysis(proceso);

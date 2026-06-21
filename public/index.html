@@ -710,6 +710,56 @@
             </div>
           </div>
 
+          <!-- Anthropic API Key -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Anthropic API Key</span>
+              <span class="badge badge-gray" style="font-size:10px;">Requiere master key</span>
+            </div>
+            <div class="card-body">
+              <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;line-height:1.6;">
+                Actualiza la clave de Anthropic que usa el agente para el análisis IA. El cambio aplica de inmediato y persiste en la base de datos.
+              </p>
+              <div class="field">
+                <label class="label">Master Key</label>
+                <input
+                  type="password"
+                  class="input mono"
+                  placeholder="Tu MASTER_API_KEY"
+                  x-model="anthropicForm.masterKey"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="field">
+                <label class="label">Nueva Anthropic API Key</label>
+                <input
+                  type="password"
+                  class="input mono"
+                  placeholder="sk-ant-api03-..."
+                  x-model="anthropicForm.newKey"
+                  @keydown.enter="updateAnthropicKey()"
+                  autocomplete="off"
+                />
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <button
+                  class="btn btn-primary btn-sm"
+                  @click="updateAnthropicKey()"
+                  :disabled="anthropicForm.loading"
+                >
+                  <span x-show="anthropicForm.loading" class="spin"></span>
+                  <svg x-show="!anthropicForm.loading" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  <span x-text="anthropicForm.loading ? 'Guardando...' : 'Guardar key'"></span>
+                </button>
+                <span x-show="anthropicForm.success" style="font-size:12px;font-weight:600;color:var(--green);display:flex;align-items:center;gap:4px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Key actualizada
+                </span>
+                <span x-show="anthropicForm.error" style="font-size:12px;color:var(--red);" x-text="anthropicForm.error"></span>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -764,6 +814,9 @@ function app() {
     // UI
     showKey: false,
     toast: { show: false, msg: '', type: 'success' },
+
+    // Anthropic key form
+    anthropicForm: { masterKey: '', newKey: '', loading: false, success: false, error: '' },
 
     async init() {
       if (this.apiKey) await this.tryConnect();
@@ -944,6 +997,32 @@ function app() {
         if (r.ok) { const b = await r.json(); this.analysis = b.data?.analysis ?? b.data; }
         else { this.showToast('Error al analizar con IA', 'error'); }
       } finally { this.analysisLoading = false; }
+    },
+
+    // ── Anthropic key ────────────────────────────────────────────────────────
+    async updateAnthropicKey() {
+      const f = this.anthropicForm;
+      f.error = ''; f.success = false;
+      if (!f.masterKey.trim()) { f.error = 'Ingresa tu master key.'; return; }
+      if (!f.newKey.trim() || f.newKey.trim().length < 10) { f.error = 'Ingresa una API key válida.'; return; }
+      f.loading = true;
+      try {
+        const res = await fetch('/api/v1/admin/anthropic-key', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-Master-Key': f.masterKey.trim() },
+          body: JSON.stringify({ value: f.newKey.trim() }),
+        });
+        const body = await res.json();
+        if (!res.ok) { f.error = body?.error?.detail || body?.message || 'Error al guardar.'; }
+        else {
+          f.success = true;
+          f.newKey = '';
+          f.masterKey = '';
+          this.showToast('Anthropic API key actualizada');
+          setTimeout(() => { f.success = false; }, 4000);
+        }
+      } catch { f.error = 'No se pudo conectar con el servidor.'; }
+      finally { f.loading = false; }
     },
 
     // ── HTTP helpers ─────────────────────────────────────────────────────────
